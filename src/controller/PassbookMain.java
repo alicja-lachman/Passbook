@@ -29,7 +29,7 @@ public class PassbookMain {
     public static void main(String[] args) {
         PassbookModel passbookModel = new PassbookModel();
         PassbookView passbookView = new PassbookView();
-        PassbookController passbookController = new PassbookController(passbookModel, passbookView);
-        passbookController.run(args);
+        NewController passbookController = new NewController(passbookModel, passbookView);
+        passbookController.init(args);
     }
 }

@@ -1,5 +1,7 @@
 package model;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import exception.EmptyPasswordFileException;
 import java.io.BufferedReader;
 import java.io.File;
@@ -8,6 +10,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -16,6 +19,8 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import java.security.spec.KeySpec;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 import javax.crypto.BadPaddingException;
@@ -41,6 +46,21 @@ public class PassbookModel {
      * field representing encryption scheme of DESede algorithm
      */
     private final String DESEDE_ENCRYPTION_SCHEME = "DESede";
+
+    /**
+     * list of stored passwords
+     */
+    private List<Password> passwordList = new ArrayList();
+
+    public void getPasswordsFromFile(String file) throws IOException {
+        Gson gson = new Gson();
+
+        Reader reader = new FileReader(file);
+
+        List<Password> list = gson.fromJson(reader, new TypeToken<List<Password>>() {
+        }.getType());
+        passwordList.addAll(list);
+    }
 
     /**
      * Method returning decrypted password.
@@ -97,6 +117,8 @@ public class PassbookModel {
         createdPassword.setUsername(username);
         createdPassword.setPassword(encrypt(password, encryptionKey));
 
+        passwordList.add(createdPassword);
+
         return createdPassword;
 
     }
@@ -109,11 +131,34 @@ public class PassbookModel {
      * @throws IOException
      */
     public void savePasswordToFile(String file, Password password) throws IOException {
-        PrintStream fileStream = new PrintStream(new File(file));
-        fileStream.println(password.getDomain());
-        fileStream.println(password.getUsername());
-        fileStream.println(password.getPassword());
-        fileStream.close();
+        Gson gson = new Gson();
+
+// 1. Java object to JSON, and save into a file
+        //2. Convert object to JSON string and save into a file directly
+        try (FileWriter writer = new FileWriter(file)) {
+
+            gson.toJson(passwordList, writer);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    public Password getPasswordForDomain(String domainName) {
+        Password foundPassword = null;
+        for (Password password : passwordList) {
+            if (password.getDomain().equals(domainName)) {
+                foundPassword = password;
+            }
+        }
+        return foundPassword;
+    }
+
+    public List<String> listAllDomainNames() {
+        List<String> domainNames = new ArrayList();
+        passwordList.forEach(password -> domainNames.add(password.getDomain()));
+        return domainNames;
     }
 
     /**
