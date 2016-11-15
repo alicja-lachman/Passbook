@@ -32,26 +32,28 @@ public class PassbookView {
     }
 
     public void displayListOfMessages(List<String> messages) {
-       for(String message: messages){
-           System.out.println(message);
-       }
+        for (String message : messages) {
+            System.out.println(message);
+        }
     }
-    
-      /**
+
+    /**
      * Method used for extracting first character from the standard input.
      *
      * @return extracted character
      */
-    public char getMenuOption()
-    {
-        Scanner scanner = new Scanner(System.in);
-        char choice = scanner.nextLine().charAt(0);
-        
+    public char getMenuOption() {
+        char choice = ' ';
+        try {
+            Scanner scanner = new Scanner(System.in);
+            choice = scanner.nextLine().charAt(0);
+        } catch (IndexOutOfBoundsException ex) {
+            return choice;
+        }
         return choice;
     }
 
-        public void waitForUser(String message)
-    {
+    public void waitForUser(String message) {
         System.out.print(message);
 
         Scanner scanner = new Scanner(System.in);
@@ -61,29 +63,21 @@ public class PassbookView {
     /**
      * Method used for clearing the screen.
      */
-    public void clearScreen()
-    {
-        try
-        {
-            if (System.getProperty("os.name").startsWith("Window"))
-            {
+    public void clearScreen() {
+        try {
+            if (System.getProperty("os.name").startsWith("Window")) {
                 Runtime.getRuntime().exec("cls");
-            }
-            else
-            {
+            } else {
                 Runtime.getRuntime().exec("clear");
             }
-        }
-        catch (IOException exception)
-        {
-            for (int i = 0; i < 1000; i++)
-            {
+        } catch (IOException exception) {
+            for (int i = 0; i < 1000; i++) {
                 System.out.println();
             }
         }
     }
-    
-      /**
+
+    /**
      * Method used for showing menu.
      */
 //    public void showMenu()

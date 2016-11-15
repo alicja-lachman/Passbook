@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
+import java.util.stream.Stream;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
@@ -51,15 +52,27 @@ public class PassbookModel {
      * list of stored passwords
      */
     private List<Password> passwordList = new ArrayList();
+    private String file;
 
-    public void getPasswordsFromFile(String file) throws IOException {
+    public void getPasswordsFromFile() throws IOException {
+        
+        try(Reader reader = new FileReader(file)){
         Gson gson = new Gson();
-
-        Reader reader = new FileReader(file);
 
         List<Password> list = gson.fromJson(reader, new TypeToken<List<Password>>() {
         }.getType());
-        passwordList.addAll(list);
+
+        if (list != null) {
+            passwordList.addAll(list);
+        }
+        } catch (IOException e) {
+            File fileToCreate = new File(file);
+            fileToCreate.createNewFile();
+        }
+    }
+
+    public void setFile(String file) {
+        this.file = file;
     }
 
     /**
@@ -110,7 +123,7 @@ public class PassbookModel {
     public Password createPassword(String domain, String username, String password, String encryptionKey)
             throws BadPaddingException, IllegalBlockSizeException,
             NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
-            UnsupportedEncodingException, NoSuchPaddingException {
+            UnsupportedEncodingException, NoSuchPaddingException, IOException {
 
         Password createdPassword = new Password();
         createdPassword.setDomain(domain);
@@ -118,6 +131,8 @@ public class PassbookModel {
         createdPassword.setPassword(encrypt(password, encryptionKey));
 
         passwordList.add(createdPassword);
+
+        savePasswordsToFile();
 
         return createdPassword;
 
@@ -130,18 +145,11 @@ public class PassbookModel {
      * @param password
      * @throws IOException
      */
-    public void savePasswordToFile(String file, Password password) throws IOException {
+    private void savePasswordsToFile() throws IOException {
         Gson gson = new Gson();
-
-// 1. Java object to JSON, and save into a file
-        //2. Convert object to JSON string and save into a file directly
         try (FileWriter writer = new FileWriter(file)) {
-
             gson.toJson(passwordList, writer);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        } 
 
     }
 
@@ -159,6 +167,15 @@ public class PassbookModel {
         List<String> domainNames = new ArrayList();
         passwordList.forEach(password -> domainNames.add(password.getDomain()));
         return domainNames;
+    }
+
+    public boolean checkIfPasswordForDomainExists(String domainName) {
+        for (Password password : passwordList) {
+            if (password.getDomain().equals(domainName)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -247,6 +264,32 @@ public class PassbookModel {
         cipher.init(Cipher.DECRYPT_MODE, key);
         byte[] decryptedText = cipher.doFinal(Base64.decodeBase64(encryptedString));
         return new String(decryptedText);
+    }
+
+    public void deletePasswordForDomain(String domainName) throws IOException {
+        Password passwordToDelete = null;
+        for (Password password : passwordList) {
+            if (password.getDomain().equals(domainName)) {
+                passwordToDelete = password;
+            }
+        }
+        if (passwordToDelete != null) {
+            passwordList.remove(passwordToDelete);
+        }
+        savePasswordsToFile();
+    }
+
+    public void changePasswordForDomain(String domainName, String newPassword, String encryptionKey)
+            throws BadPaddingException, IllegalBlockSizeException,
+            NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
+            UnsupportedEncodingException, NoSuchPaddingException, IOException {
+
+        for (Password password : passwordList) {
+            if (password.getDomain().equals(domainName)) {
+                password.setPassword(encrypt(newPassword, encryptionKey));
+            }
+        }
+        savePasswordsToFile();
     }
 
 }

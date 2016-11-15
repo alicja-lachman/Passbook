@@ -91,6 +91,8 @@ public class PassbookController {
             }
         }
     }
+    
+   
 
     /**
      * Method handling exceptions and setting wasError flag
@@ -129,7 +131,7 @@ public class PassbookController {
             view.displayMessage(model.getDecryptedPassword(password, args[2]));
         } else if (args[0].equals("-w")) {
             Password password = model.createPassword(args[2], args[3], args[4], args[5]);
-            model.savePasswordToFile(args[1], password);
+            //model.savePasswordToFile(args[1], password);
         } else {
             getProgramArgumentsFromUser();
         }
