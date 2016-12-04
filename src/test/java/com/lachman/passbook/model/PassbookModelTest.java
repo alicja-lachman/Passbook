@@ -53,8 +53,13 @@ public class PassbookModelTest {
      */
     @Test
     public void testGetPasswordsFromFile() throws Exception {
+        //GIVEN
         File file = new File(exampleFilePath);
+
+        //WHEN
         instance.getPasswordsFromFile(file);
+
+        //THEN
         assertNotEquals(0, instance.getRowCount());
     }
 
@@ -63,10 +68,13 @@ public class PassbookModelTest {
      */
     @Test
     public void testGetDecryptedPasswordForDomain() throws Exception {
-
+        //GIVEN
         instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
 
+        //WHEN
         String result = instance.getDecryptedPasswordForDomain(domainName, ENCRYPTION_KEY);
+
+        //THEN
         assertEquals(String.valueOf(password), result);
 
     }
@@ -76,8 +84,10 @@ public class PassbookModelTest {
      */
     @Test
     public void testCreatePassword() throws Exception {
-
+        //WHEN
         instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
+
+        //THEN
         assertEquals(true, instance.checkIfPasswordForDomainExists(domainName));
     }
 
@@ -90,12 +100,13 @@ public class PassbookModelTest {
             NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
             UnsupportedEncodingException, NoSuchPaddingException, IOException {
         //GIVEN
-
         String encryptionKey = "233";
 
         //WHEN
         instance.createPassword(domainName, userName, password, encryptionKey);
 
+        //THEN
+        //InvalidKeyException
     }
 
     /**
@@ -103,11 +114,15 @@ public class PassbookModelTest {
      */
     @Test
     public void testSavePasswordsToFile() throws Exception {
+        //GIVEN
         instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
         File file = new File(exampleFileToCreatePath);
 
+        //WHEN
         instance.savePasswordsToFile(file);
         instance.getPasswordsFromFile(file);
+
+        //THEN
         assertEquals(1, instance.getRowCount());
     }
 
@@ -185,9 +200,8 @@ public class PassbookModelTest {
     public void testChangePasswordForDomain() throws BadPaddingException, IllegalBlockSizeException,
             NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
             UnsupportedEncodingException, NoSuchPaddingException, IOException {
-
+        //GIVEN
         instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
-
         String newPassword = "password2";
 
         //WHEN
@@ -206,10 +220,12 @@ public class PassbookModelTest {
     public void testGetRowCount() throws BadPaddingException, IllegalBlockSizeException,
             NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
             UnsupportedEncodingException, NoSuchPaddingException, IOException {
+        //WHEN
         instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
         int result = instance.getRowCount();
-        assertEquals(1, result);
 
+        //THEN
+        assertEquals(1, result);
     }
 
     /**
@@ -217,23 +233,27 @@ public class PassbookModelTest {
      */
     @Test
     public void testGetColumnCount() {
-    
+        //WHEN
         int result = instance.getColumnCount();
+
+        //THEN
         assertEquals(3, result);
-      
     }
 
     /**
      * Test of getValueAt method, of class PassbookModel.
      */
     @Test
-    public void testGetValueAt()throws BadPaddingException, IllegalBlockSizeException,
+    public void testGetValueAt() throws BadPaddingException, IllegalBlockSizeException,
             NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
-            UnsupportedEncodingException, NoSuchPaddingException, IOException  {
-     instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
+            UnsupportedEncodingException, NoSuchPaddingException, IOException {
+        //WHEN
+        instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
         Object result = instance.getValueAt(0, 0);
+
+        //THEN
         assertEquals(domainName, result);
-  
+
     }
 
     /**
@@ -241,8 +261,10 @@ public class PassbookModelTest {
      */
     @Test
     public void testGetColumnName() {
-     
+        //WHEN
         String result = instance.getColumnName(0);
+
+        //THEN
         assertEquals("Domain", result);
 
     }
