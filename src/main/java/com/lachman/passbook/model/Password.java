@@ -13,7 +13,7 @@ public class Password {
      */
     private String username;
     /**
-     * domain that the password was created in
+     * domain that the password was created for
      */
     private String domain;
     /**
@@ -45,9 +45,4 @@ public class Password {
         return password;
     }
     
-    public Password(){
-        this.domain="domain";
-        this.password = "password";
-        this.username ="username";
-    }
 }

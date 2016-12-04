@@ -1,5 +1,6 @@
 package com.lachman.passbook.model;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.Files;
@@ -7,7 +8,6 @@ import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.List;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
@@ -19,51 +19,55 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 /**
- * @version 1.0
+ * @version 2.0
  * @author Alicja Lachman
  */
 public class PassbookModelTest {
 
     final String ENCRYPTION_KEY = "123456789123456789123456789";
+    final String exampleFilePath = "src/test/example.txt";
+    final static String exampleFileToCreatePath = "src/test/exampleCreated.txt";
+    String domainName = "domain";
+    String userName = "username";
+    char[] password = {'p', 'a', 's', 's', 'w', 'o', 'r', 'd'};
     PassbookModel instance;
-    final String filePath = "src/test/example.txt";
 
     @Before
-    public void preparePassbookModel() throws IOException {
+    public void preparePassbookModel() {
         instance = new PassbookModel();
-        instance.setFile(filePath);
-        instance.getPasswordsFromFile();
+
     }
 
-    @After
-    public void deleteExampleTextFile() throws IOException {
-        Files.delete(Paths.get(filePath));
+    @AfterClass
+    public static void deleteExampleTextFile() throws IOException {
+        Files.delete(Paths.get(exampleFileToCreatePath));
+    }
+
+    @Test
+    public void testEmptyPassbookModel() throws Exception {
+        assertEquals(0, instance.getRowCount());
     }
 
     /**
-     * Test of getDecryptedPassword method, of class PassbookModel.
+     * Test of getPasswordsFromFile method, of class PassbookModel.
      */
     @Test
-    public void testGetDecryptedPassword() throws BadPaddingException, IllegalBlockSizeException,
-            NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
-            UnsupportedEncodingException, NoSuchPaddingException, IOException {
-        //GIVEN
-        String domain = "domainName";
-        String username = "username";
-        String password = "password";
-        Password createdPassword = instance.createPassword(domain, username, password, ENCRYPTION_KEY);
-        String expResult = new StringBuilder().append("The password for domain: ")
-                .append(domain)
-                .append(" and username: ")
-                .append(username)
-                .append(" is: ")
-                .append(password)
-                .toString();
-        //WHEN
-        String result = instance.getDecryptedPassword(createdPassword, ENCRYPTION_KEY);
+    public void testGetPasswordsFromFile() throws Exception {
+        File file = new File(exampleFilePath);
+        instance.getPasswordsFromFile(file);
+        assertNotEquals(0, instance.getRowCount());
+    }
 
-        //THEN
-        assertEquals(expResult, result);
+    /**
+     * Test of getDecryptedPasswordForDomain method, of class PassbookModel.
+     */
+    @Test
+    public void testGetDecryptedPasswordForDomain() throws Exception {
+
+        instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
+
+        String result = instance.getDecryptedPasswordForDomain(domainName, ENCRYPTION_KEY);
+        assertEquals(String.valueOf(password), result);
 
     }
 
@@ -71,40 +75,40 @@ public class PassbookModelTest {
      * Test of createPassword method, of class PassbookModel.
      */
     @Test
-    public void testCreatePassword() throws BadPaddingException, IllegalBlockSizeException,
-            NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
-            UnsupportedEncodingException, NoSuchPaddingException, IOException {
-        //GIVEN
-        String domain = "domainName";
-        String username = "username";
-        String password = "password";
+    public void testCreatePassword() throws Exception {
 
-        //WHEN
-        instance.createPassword(domain, username, password, ENCRYPTION_KEY);
-
-        //THEN
-        assertEquals(instance.checkIfPasswordForDomainExists(domain), true);
-
+        instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
+        assertEquals(true, instance.checkIfPasswordForDomainExists(domainName));
     }
 
     /**
-     * Test of createPassword method, of class PassbookModel using wrong encryption key.
+     * Test of createPassword method, of class PassbookModel using wrong
+     * encryption key.
      */
     @Test(expected = InvalidKeyException.class)
     public void testCreatePasswordWithWrongEncryptionKey() throws BadPaddingException, IllegalBlockSizeException,
             NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
             UnsupportedEncodingException, NoSuchPaddingException, IOException {
         //GIVEN
-        String domain = "domainName";
-        String username = "username";
-        String password = "password";
+
         String encryptionKey = "233";
 
         //WHEN
-        instance.createPassword(domain, username, password, encryptionKey);
+        instance.createPassword(domainName, userName, password, encryptionKey);
 
-        //THEN 
-        //Expected exception: InvalidKeyException
+    }
+
+    /**
+     * Test of savePasswordsToFile method, of class PassbookModel.
+     */
+    @Test
+    public void testSavePasswordsToFile() throws Exception {
+        instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
+        File file = new File(exampleFileToCreatePath);
+
+        instance.savePasswordsToFile(file);
+        instance.getPasswordsFromFile(file);
+        assertEquals(1, instance.getRowCount());
     }
 
     /**
@@ -114,14 +118,10 @@ public class PassbookModelTest {
     public void testGetPasswordForDomain() throws BadPaddingException, IllegalBlockSizeException,
             NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
             UnsupportedEncodingException, NoSuchPaddingException, IOException {
-        //GIVEN
-        String domain = "domainName";
-        String username = "username";
-        String password = "password";
 
         //WHEN
-        Password createdPassword = instance.createPassword(domain, username, password, ENCRYPTION_KEY);
-        Password result = instance.getPasswordForDomain(domain);
+        Password createdPassword = instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
+        Password result = instance.getPasswordForDomain(domainName);
 
         //THEN
         assertEquals(createdPassword, result);
@@ -136,42 +136,14 @@ public class PassbookModelTest {
     public void testGetPasswordForUnexistingDomain() throws BadPaddingException, IllegalBlockSizeException,
             NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
             UnsupportedEncodingException, NoSuchPaddingException, IOException {
-        //GIVEN
-        String domain = "domainName";
-        String username = "username";
-        String password = "password";
 
         //WHEN
-        Password createdPassword = instance.createPassword(domain, username, password, ENCRYPTION_KEY);
+        Password createdPassword = instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
         Password result = instance.getPasswordForDomain("otherDomain");
 
         //THEN
         assertNull(result);
 
-    }
-
-    /**
-     * Test of listAllDomainNames method, of class PassbookModel.
-     */
-    @Test
-    public void testListAllDomainNames() throws BadPaddingException, IllegalBlockSizeException,
-            NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
-            UnsupportedEncodingException, NoSuchPaddingException, IOException {
-        //GIVEN
-        String domain = "domainName";
-        String username = "username";
-        String password = "password";
-        String domain2 = "domainName2";
-        String username2 = "username2";
-        String password2 = "password2";
-
-        instance.createPassword(domain, username, password, ENCRYPTION_KEY);
-        instance.createPassword(domain2, username2, password2, ENCRYPTION_KEY);
-
-        //WHEN
-        List<String> result = instance.listAllDomainNames();
-        //THEN
-        assertEquals(2, result.size());
     }
 
     /**
@@ -181,16 +153,12 @@ public class PassbookModelTest {
     public void testCheckIfPasswordForDomainExists() throws BadPaddingException, IllegalBlockSizeException,
             NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
             UnsupportedEncodingException, NoSuchPaddingException, IOException {
-        //GIVEN
-        String domain = "domainName";
-        String username = "username";
-        String password = "password";
 
         //WHEN
-        instance.createPassword(domain, username, password, ENCRYPTION_KEY);
+        instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
 
         //THEN
-        assertEquals(instance.checkIfPasswordForDomainExists(domain), true);
+        assertEquals(true, instance.checkIfPasswordForDomainExists(domainName));
     }
 
     /**
@@ -200,18 +168,14 @@ public class PassbookModelTest {
     public void testDeletePasswordForDomain() throws BadPaddingException, IllegalBlockSizeException,
             NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
             UnsupportedEncodingException, NoSuchPaddingException, IOException {
-        //GIVEN
-        String domain = "domainName";
-        String username = "username";
-        String password = "password";
 
-        instance.createPassword(domain, username, password, ENCRYPTION_KEY);
+        instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
 
         //WHEN
-        instance.deletePasswordForDomain(domain);
+        instance.deletePasswordForDomain(domainName);
 
         //THEN
-        assertEquals(instance.checkIfPasswordForDomainExists(domain), false);
+        assertEquals(false, instance.checkIfPasswordForDomainExists(domainName));
     }
 
     /**
@@ -221,29 +185,65 @@ public class PassbookModelTest {
     public void testChangePasswordForDomain() throws BadPaddingException, IllegalBlockSizeException,
             NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
             UnsupportedEncodingException, NoSuchPaddingException, IOException {
-        //GIVEN
-        String domain = "domainName";
-        String username = "username";
-        String password = "password";
 
-        instance.createPassword(domain, username, password, ENCRYPTION_KEY);
+        instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
 
         String newPassword = "password2";
 
         //WHEN
-        instance.changePasswordForDomain(domain, newPassword, ENCRYPTION_KEY);
-        Password changesPassword = instance.getPasswordForDomain(domain);
-        String result = instance.getDecryptedPassword(changesPassword, ENCRYPTION_KEY);
-        String expResult = new StringBuilder().append("The password for domain: ")
-                .append(domain)
-                .append(" and username: ")
-                .append(username)
-                .append(" is: ")
-                .append(newPassword)
-                .toString();
+        instance.changePasswordForDomain(domainName, newPassword, ENCRYPTION_KEY);
+
+        String result = instance.getDecryptedPasswordForDomain(domainName, ENCRYPTION_KEY);
 
         //THEN
-        assertEquals(expResult, result);
+        assertEquals(newPassword, result);
     }
 
+    /**
+     * Test of getRowCount method, of class PassbookModel.
+     */
+    @Test
+    public void testGetRowCount() throws BadPaddingException, IllegalBlockSizeException,
+            NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
+            UnsupportedEncodingException, NoSuchPaddingException, IOException {
+        instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
+        int result = instance.getRowCount();
+        assertEquals(1, result);
+
+    }
+
+    /**
+     * Test of getColumnCount method, of class PassbookModel.
+     */
+    @Test
+    public void testGetColumnCount() {
+    
+        int result = instance.getColumnCount();
+        assertEquals(3, result);
+      
+    }
+
+    /**
+     * Test of getValueAt method, of class PassbookModel.
+     */
+    @Test
+    public void testGetValueAt()throws BadPaddingException, IllegalBlockSizeException,
+            NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
+            UnsupportedEncodingException, NoSuchPaddingException, IOException  {
+     instance.createPassword(domainName, userName, password, ENCRYPTION_KEY);
+        Object result = instance.getValueAt(0, 0);
+        assertEquals(domainName, result);
+  
+    }
+
+    /**
+     * Test of getColumnName method, of class PassbookModel.
+     */
+    @Test
+    public void testGetColumnName() {
+     
+        String result = instance.getColumnName(0);
+        assertEquals("Domain", result);
+
+    }
 }

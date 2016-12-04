@@ -1,4 +1,6 @@
 com.lachman.passbook.controller
 com.lachman.passbook.exception
 com.lachman.passbook.model
+com.lachman.passbook.util
 com.lachman.passbook.view
+com.lachman.passbook.view.dialog

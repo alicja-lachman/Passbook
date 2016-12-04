@@ -1,6 +1,7 @@
 package com.lachman.passbook.model;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import com.lachman.passbook.exception.EmptyPasswordFileException;
 import java.io.BufferedReader;
@@ -32,10 +33,11 @@ import javax.swing.table.AbstractTableModel;
 import org.apache.commons.codec.binary.Base64;
 
 /**
- * Model class of the application It allows ciphering and deciphering password
- * data to and from files. It uses the DESede encryption algorithm
+ * Model class of the application. It allows ciphering and deciphering password
+ * data to and from files. It uses the DESede encryption algorithm. It is also
+ * data model for JTable.
  *
- * @version 2.0
+ * @version 3.0
  * @author Alicja Lachman
  */
 public class PassbookModel extends AbstractTableModel {
@@ -53,28 +55,32 @@ public class PassbookModel extends AbstractTableModel {
      * list of stored passwords
      */
     private List<Password> passwordList = new ArrayList();
-    /**
-     * path to file where all passwords are stored
-     */
-    private String file;
 
+    /**
+     * final String which is a visual representation of encrypted password
+     */
+    private final String HIDDEN_PASSWORD = "*****";
+    /**
+     * Array of strings describing table's column's names.
+     */
     private String[] columns = new String[]{"Domain", "Username", "Password"};
 
+    /**
+     * Constructor of the class.
+     */
     public PassbookModel() {
         super();
-        passwordList.add(new Password());
-        passwordList.add(new Password());
-
     }
 
     /**
-     * Method reads passwords from file if exists. If not, a new file is
-     * created.
+     * Method reads passwords from file if exists. Afterwards, it updates the
+     * list.
      *
+     * @param file
      * @throws IOException
+     * @throws JsonSyntaxException
      */
-    public void getPasswordsFromFile() throws IOException {
-
+    public void getPasswordsFromFile(File file) throws IOException, JsonSyntaxException {
         try (Reader reader = new FileReader(file)) {
             Gson gson = new Gson();
 
@@ -82,29 +88,18 @@ public class PassbookModel extends AbstractTableModel {
             }.getType());
 
             if (list != null) {
-                passwordList.addAll(list);
+                passwordList = list;
+                fireTableDataChanged();
             }
-        } catch (IOException e) {
-            File fileToCreate = new File(file);
-            fileToCreate.createNewFile();
         }
-    }
-
-    /**
-     * Method setting the path to file which stores passwords.
-     *
-     * @param file
-     */
-    public void setFile(String file) {
-        this.file = file;
     }
 
     /**
      * Method returning decrypted password.
      *
-     * @param password password to be decrypted
-     * @param encryptionKey key used for encryption
-     * @return string containing all data about password entry
+     * @param domainName for which the password is being decrypted.
+     * @param encryptionKey
+     * @return decrypted password.
      * @throws BadPaddingException
      * @throws IllegalBlockSizeException
      * @throws NoSuchAlgorithmException
@@ -113,18 +108,11 @@ public class PassbookModel extends AbstractTableModel {
      * @throws UnsupportedEncodingException
      * @throws NoSuchPaddingException
      */
-    public String getDecryptedPassword(Password password, String encryptionKey)
+    public String getDecryptedPasswordForDomain(String domainName, String encryptionKey)
             throws BadPaddingException, IllegalBlockSizeException,
             NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
             UnsupportedEncodingException, NoSuchPaddingException {
-        return new StringBuilder()
-                .append("The password for domain: ")
-                .append(password.getDomain())
-                .append(" and username: ")
-                .append(password.getUsername())
-                .append(" is: ")
-                .append(decrypt(password.getPassword(), encryptionKey))
-                .toString();
+        return decrypt(getPasswordForDomain(domainName).getPassword(), encryptionKey);
     }
 
     /**
@@ -145,7 +133,7 @@ public class PassbookModel extends AbstractTableModel {
      * @throws NoSuchPaddingException
      * @throws IOException
      */
-    public Password createPassword(String domain, String username, String password, String encryptionKey)
+    public Password createPassword(String domain, String username, char[] password, String encryptionKey)
             throws BadPaddingException, IllegalBlockSizeException,
             NoSuchAlgorithmException, InvalidKeyException, InvalidKeySpecException,
             UnsupportedEncodingException, NoSuchPaddingException, IOException {
@@ -153,20 +141,19 @@ public class PassbookModel extends AbstractTableModel {
         Password createdPassword = new Password();
         createdPassword.setDomain(domain);
         createdPassword.setUsername(username);
-        createdPassword.setPassword(encrypt(password, encryptionKey));
-
+        createdPassword.setPassword(encrypt(String.valueOf(password), encryptionKey));
         passwordList.add(createdPassword);
         fireTableDataChanged();
-        // savePasswordsToFile();
         return createdPassword;
     }
 
     /**
      * Method saving passwordList to file.
      *
+     * @param file
      * @throws IOException
      */
-    private void savePasswordsToFile() throws IOException {
+    public void savePasswordsToFile(File file) throws IOException {
         Gson gson = new Gson();
         try (FileWriter writer = new FileWriter(file)) {
             gson.toJson(passwordList, writer);
@@ -175,10 +162,11 @@ public class PassbookModel extends AbstractTableModel {
     }
 
     /**
-     * Method returning Password for given domain name.
+     * Method returning Password for given domain name. If no password is found,
+     * then returns null.
      *
      * @param domainName
-     * @return
+     * @return password object
      */
     public Password getPasswordForDomain(String domainName) {
         Password foundPassword = null;
@@ -188,17 +176,6 @@ public class PassbookModel extends AbstractTableModel {
             }
         }
         return foundPassword;
-    }
-
-    /**
-     * Method returning all domain names for which passwords are stored.
-     *
-     * @return list of domain names
-     */
-    public List<String> listAllDomainNames() {
-        List<String> domainNames = new ArrayList();
-        passwordList.forEach(password -> domainNames.add(password.getDomain()));
-        return domainNames;
     }
 
     /**
@@ -323,7 +300,7 @@ public class PassbookModel extends AbstractTableModel {
         if (passwordToDelete != null) {
             passwordList.remove(passwordToDelete);
         }
-        savePasswordsToFile();
+        fireTableDataChanged();
     }
 
     /**
@@ -351,19 +328,39 @@ public class PassbookModel extends AbstractTableModel {
                 password.setPassword(encrypt(newPassword, encryptionKey));
             }
         }
-        savePasswordsToFile();
+
     }
 
+    /**
+     * Method from abstract class AbstractTableModel, it returns number of
+     * passwords in table.
+     *
+     * @return
+     */
     @Override
     public int getRowCount() {
         return passwordList.size();
     }
 
+    /**
+     * Method from abstract class AbstractTableModel, it returns number of
+     * columns in table.
+     *
+     * @return
+     */
     @Override
     public int getColumnCount() {
         return columns.length;
     }
 
+    /**
+     * Method from abstract class AbstractTableModel, it returns table's value
+     * for given row and column.
+     *
+     * @param rowIndex
+     * @param columnIndex
+     * @return
+     */
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
         Password password = passwordList.get(rowIndex);
@@ -373,23 +370,21 @@ public class PassbookModel extends AbstractTableModel {
             case 1:
                 return password.getUsername();
             case 2:
-                return password.getPassword();
-            // to complete here...
+                return HIDDEN_PASSWORD;
             default:
                 return null;
         }
     }
 
+    /**
+     * Method from abstract class AbstractTableModel, it returns name of the
+     * column with given index.
+     *
+     * @param col
+     * @return
+     */
     @Override
     public String getColumnName(int col) {
         return columns[col];
     }
-
-    public void addRow() {
-        Password passwordToAdd = new Password();
-        passwordList.add(passwordToAdd);
-        fireTableDataChanged();
-
-    }
-
 }
